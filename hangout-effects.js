@@ -4,9 +4,15 @@
   var $ = global.$;
   var hapi = global.gapi.hangout;
   
+  var token;
+  var developerKey = 'AIzaSyBThmoCmPIgAVWU8ItPCIarKwlNXBJehEs';
+  
   var metaEffect;
   var effect = {};
   var timeoutId;
+  
+  var papi;
+  var picker;
   
   var chains = {
     'Stop': [],
@@ -45,6 +51,7 @@
   };
   
   var init = function(){
+    console.log( 'hangout-effects initializing' );
     hapi.onApiReady.add(apiReady);
   };
   ex.init = init;
@@ -52,13 +59,60 @@
   var apiReady = function(){
     console.log('apiReady');
     
+    token = param( 'token' );
+    
+    global.google.load('picker', '1', {'callback': pickerApiReady});
+    
     metaEffect = hapi.av.effects.createMetaEffect();
     metaEffect.onNotify.add( effectsListReady );
     metaEffect.getEffectDescriptions();
     
-    //setInterval( locate, 1000 );
-    //setInterval( fisheye, 50 );
-    //setInterval( cropFace, 50 );
+  };
+  
+  var param = function( name, paramSource ){
+    if( !paramSource ){
+      paramSource = global.location.search.substring(1);
+    }
+    var params = paramSource.split('&');
+    
+    for( var co=0; co<params.length; co++ ){
+      var nameVal = params[co].split('=');
+      if( nameVal[0] === name ){
+        return unescape(nameVal[1]);
+      }
+    }
+    
+    return null;
+  };
+  
+  var pickerApiReady = function(){
+    papi = global.google.picker;
+    buildPicker();
+    
+    $('#controls').html('');
+    $('#controls').append('<button id="load">Load...</button>');
+    $('#load').click(function(){
+      picker.setVisible(true);
+    });
+  };
+  
+  var buildPicker = function(){
+    // We need to know the parent to find the right window to put the picker over
+    var parentUrl = param('parent');
+    var parent = param('parent',parentUrl);
+    //parent = 'https://prisoner.com';   // FIXME
+    console.log( 'parentUrl='+parentUrl+' parent='+parent );
+    
+    var view = new papi.DocsView()
+      .setMimeTypes('application/json,text/pain');
+    
+    picker = new papi.PickerBuilder()
+      .addView( papi.ViewId.DOCS )
+      .setOrigin( parent )
+      .setOAuthToken( token )
+      .setDeveloperKey( developerKey )
+      .setCallback( fileSelected )
+      .build();
   };
   
   var effectsListReady = function(notify){
@@ -70,15 +124,28 @@
         effect[effectId] = desc;
       } 
       metaEffect.onNotify.remove( effectsListReady );
-      showUi();
     }
   };
   
-  var showUi = function(){
-    for( var name in chains ){
-      $('#sidebar').append('<button data-chain="'+name+'">'+name+'</button>');
+  var fileSelected = function( picked ){
+    if( picked[papi.Response.ACTION] === papi.Action.PICKED ){
+      var metadata = picked[papi.Response.DOCUMENTS][0];
+      var url = metadata[papi.Document.URL];
+      loadFile( url, true );
     }
-    $('#sidebar button').click(function(){
+  };
+  
+  var loadFile = function( url, useToken ){
+    console.log( url );
+    // TODO - continue here
+  };
+  
+  var showUserControls = function(){
+    $('#sidebar #user-controls').html('');
+    for( var name in chains ){
+      $('#sidebar #user-controls').append('<button data-chain="'+name+'">'+name+'</button>');
+    }
+    $('#sidebar #user-controls button').click(function(){
       var name = $(this).data('chain');
       var chain = chains[name];
       showEffects( chain );
@@ -206,3 +273,6 @@
 
   window.effects = ex;
 })(this);
+
+console.log( 'hangouts-effects.js loaded' );
+console.log( effects );
