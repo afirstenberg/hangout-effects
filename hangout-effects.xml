@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Module>
+  <ModulePrefs title="caption">
+    <Require feature="rpc"/>
+    <Require feature="views"/>
+  </ModulePrefs>
+  <Content type="html">
+    <![CDATA[
+      <link rel='stylesheet' href='//prisoner.com/dev/hangout-effects/hangout-effects.css?q=v'/>
+      <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+      <script src="//plus.google.com/hangouts/_/api/dev/hangout.js"></script>
+      <script type="text/javascript" src="//prisoner.com/dev/hangout-effects/hangout-effects.js?q=d"></script>
+
+      <div id='sidebar'></div>
+
+      <script type='text/javascript'>
+        gadgets.util.registerOnLoadHandler(effects.init);
+      </script>
+    ]]>
+  </Content>
+</Module>
