@@ -14,6 +14,8 @@
   var papi;
   var picker;
   
+  var dapi;
+  
   var chains = {
     'Stop': [],
     'Fisheye Fast': [
@@ -62,6 +64,7 @@
     token = param( 'token' );
     
     global.google.load('picker', '1', {'callback': pickerApiReady});
+    global.gapi.client.load('drive', 'v2', driveApiReady);
     
     metaEffect = hapi.av.effects.createMetaEffect();
     metaEffect.onNotify.add( effectsListReady );
@@ -85,15 +88,26 @@
     return null;
   };
   
+  var driveApiReady = function(){
+    dapi = global.gapi.client.drive;
+    apisReady();
+  };
+  
   var pickerApiReady = function(){
     papi = global.google.picker;
-    buildPicker();
-    
-    $('#controls').html('');
-    $('#controls').append('<button id="load">Load...</button>');
-    $('#load').click(function(){
-      picker.setVisible(true);
-    });
+    apisReady();
+  };
+  
+  var apisReady = function(){
+    if( dapi && papi ){
+      buildPicker();
+      
+      $('#controls').html('');
+      $('#controls').append('<button id="load">Load...</button>');
+      $('#load').click(function(){
+        picker.setVisible(true);
+      });
+    }
   };
   
   var buildPicker = function(){
@@ -104,10 +118,11 @@
     console.log( 'parentUrl='+parentUrl+' parent='+parent );
     
     var view = new papi.DocsView()
-      .setMimeTypes('application/json,text/pain');
+      .setMimeTypes('application/json,text/plain');
     
     picker = new papi.PickerBuilder()
-      .addView( papi.ViewId.DOCS )
+      .addView( view )
+      //.addView( papi.ViewId.DOCS )
       .setOrigin( parent )
       .setOAuthToken( token )
       .setDeveloperKey( developerKey )
@@ -131,13 +146,44 @@
     if( picked[papi.Response.ACTION] === papi.Action.PICKED ){
       var metadata = picked[papi.Response.DOCUMENTS][0];
       var url = metadata[papi.Document.URL];
-      loadFile( url, true );
+      var id = metadata.id;
+      console.log( 'id='+id+' type='+metadata[papi.Document.MIME_TYPE]+' '+metadata[papi.Document.TYPE] );
+      //loadFile( url, true );
+      loadDriveFile( id );
     }
+  };
+  
+  var loadDriveFile = function( id ){
+    var at = global.gapi.auth.setToken({
+      access_token: token
+    });
+    var req = dapi.files.get({
+      'fileId': id
+    });
+    req.execute(function(resp){
+      console.log( resp );
+      var url = resp.downloadUrl;
+      //var url = resp.webContentLink;
+      loadFile( url, true );
+    });
   };
   
   var loadFile = function( url, useToken ){
     console.log( url );
-    // TODO - continue here
+    var headers = {};
+    if( useToken ){
+      headers['Authorization'] = 'Bearer '+token;
+    }
+    $.ajax({
+      url: url,
+      headers: headers  
+    }).done(function(data,status,xhr){
+      console.log('loaded');
+      chains = JSON.parse(data);
+      showUserControls();
+    }).fail(function(xhr,status,error){
+      console.log( 'file load failed: '+error );
+    });
   };
   
   var showUserControls = function(){
