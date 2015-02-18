@@ -16,41 +16,7 @@
   
   var dapi;
   
-  var chains = {
-    'Stop': [],
-    'Fisheye Fast': [
-      {
-        "x-name":"fisheye",
-        "scale": 0.0,
-        "x-delta": {
-          "scale": {
-            "delta": 0.1,
-            "min": 0.1,
-            "max": 0.5
-          }
-        }
-      },
-      {
-        "x-name": "x-timeout",
-        "interval": 50
-      }
-    ],
-    'Fisheye Slow': [
-      {
-        "x-name":"fisheye",
-        "scale": 0.1,
-        "x-delta": {
-          "scale": {
-            "delta": 0.1
-          }
-        }
-      },
-      {
-        "x-name": "x-timeout",
-        "interval": 100
-      }
-    ]
-  };
+  var chains;
   
   var init = function(){
     console.log( 'hangout-effects initializing' );
@@ -214,6 +180,8 @@
       var data = dataChain[co];
       var effectName = data['x-name'];
       var effectInfo = effect[effectName];
+      
+      var showDebug = false;
 
       if( effectInfo ){
         var subEffect = metaEffect.createSubEffect( effectName, data );
@@ -251,8 +219,25 @@
         
       } else if( effectName == 'x-timeout' ){
         timeout = data['interval'];
+        var debugEvery = data['debug'];
+        if( debugEvery ){
+          var debugCounter = data['debugCounter'];
+          if( typeof debugCounter === 'undefined' ){
+            debugCounter = 0;
+          }
+          showDebug = (debugCounter % debugEvery === 0);
+          data['debugCounter'] = debugCounter+1;
+        }
+        
+      } else {
+        console.log( "Unknown x-name: "+effectName );
+        return;
       }
 
+    }
+    
+    if( showDebug && console && console.log ){
+      console.log( chain );
     }
     
     // Execute the chain
