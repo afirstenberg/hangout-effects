@@ -99,6 +99,7 @@
   var effectsListReady = function(notify){
     if( notify && notify.effect_descriptions ){
       console.log( notify );
+      //console.log( JSON.stringify(notify.effect_descriptions) );
       for( var co=0; co<notify.effect_descriptions.length; co++ ){
         var desc = notify.effect_descriptions[co];
         var effectId = desc.id;
@@ -188,35 +189,10 @@
         chain.push( subEffect );
   
         // If there are deltas to be applied, apply them
-        var deltaFields = data['x-delta'];
-        if( deltaFields ){
-          for( var deltaField in deltaFields ){
-            var paramInfo = effectInfo.params[deltaField];
-            var deltaVal = deltaFields[deltaField];
-            
-            // Get the settings for the delta
-            var delta = deltaVal['delta'];
-            data[deltaField] += delta;
-            
-            // Compute min/max values from settings or from range defaults
-            var min = deltaVal['min'];
-            if( typeof min === 'undefined' ){
-              min = paramInfo.min;
-            }
-            var max = deltaVal['max'];
-            if( typeof max === 'undefined' ){
-              max = paramInfo.max;
-            }
-            
-            if( data[deltaField] < min || data[deltaField] > max ){
-              // If we are outside the bounds, reverse direction and update
-              deltaVal['delta'] *= -1.0;
-              delta *= -1.0;
-              data[deltaField] += delta;
-            }
-          }
+        if( data['x-delta'] ){
+          data = applyDelta( data['x-delta'], effectInfo.params, data );
         }
-        
+
       } else if( effectName == 'x-timeout' ){
         timeout = data['interval'];
         var debugEvery = data['debug'];
@@ -230,10 +206,11 @@
         }
         
       } else {
-        console.log( "Unknown x-name: "+effectName );
+        alert( "Unknown effect name: "+effectName );
         return;
       }
 
+      dataChain[co] = data;
     }
     
     if( showDebug && console && console.log ){
@@ -249,6 +226,45 @@
       timeoutId = setTimeout( function(){showEffects(dataChain);}, timeout );
     }
     
+  };
+  
+  var applyDelta = function( deltaO, paramO, dataO ){
+    for( var field in deltaO ){
+      var deltaInfo = deltaO[field];
+      if( typeof deltaInfo['x-delta'] === 'undefined' ){
+        // There are nested objects. Recurse into them to handle
+        dataO[field] = applyDelta( deltaO[field], paramO[field], dataO[field] );
+        
+      } else {
+        var paramInfo = paramO[field];
+
+        // Get the settings for the delta
+        var delta = deltaInfo['x-delta'];
+        dataO[field] += delta;
+        
+        // Compute min/max values from settings or from range defaults
+        var min = deltaInfo['x-min'];
+        if( typeof min === 'undefined' ){
+          min = paramInfo.min;
+        }
+        var max = deltaInfo['x-max'];
+        if( typeof max === 'undefined' ){
+          max = paramInfo.max;
+        }
+        
+        console.log( dataO );
+        console.log( field );
+        console.log( "dataO[field]="+dataO[field]+" min="+min+" max="+max );
+        if( dataO[field] < min || dataO[field] > max ){
+          // If we are outside the bounds, reverse direction and update
+          deltaInfo['x-delta'] *= -1.0;
+          delta *= -1.0;
+          dataO[field] += delta;
+        }
+
+      }
+    }
+    return dataO;
   };
   
   var locate = function(){
